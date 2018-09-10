@@ -781,3 +781,31 @@ From
 Для пятого по счету пассажира из числа вылетевших из Ростова в апреле 2003 года определить компанию, номер рейса и дату вылета.
 Замечание. Считать, что два рейса одновременно вылететь из Ростова не могут.*/
 
+Select name, trip_no, date
+From
+(
+	Select 
+		row_number() over (order by pt.date, t.time_out, pt.ID_psg) as numb,
+		c.name, 
+		t.trip_no, 
+		pt.date
+	From
+		Company c
+		Join Trip t On t.ID_comp=c.ID_comp
+		Join Pass_in_trip pt On t.trip_no=pt.trip_no
+	Where t.town_from = 'Rostov' and year(pt.date) = 2003 and month(pt.date) = 4
+) t1
+Where numb = 5
+
+/*Задание: 108 (Baser: 2013-10-16)
+Реставрация экспонатов секции "Треугольники" музея ПФАН проводилась согласно техническому заданию. Для каждой записи таблицы utb малярами подкрашивалась сторона любой фигуры, если длина этой стороны равнялась b_vol.
+Найти окрашенные со всех сторон треугольники, кроме равносторонних, равнобедренных и тупоугольных. 
+Для каждого треугольника (но без повторений) вывести три значения X, Y, Z, где X - меньшая, Y - средняя, а Z - большая сторона.*/
+
+Select DISTINCT
+	b1.b_vol x, b2.b_vol y, b3.b_vol z
+From
+	utB b1
+	Join utB b2 On b2.b_vol>b1.b_vol
+	Join utB b3 On b3.b_vol>b2.b_vol
+Where not (b3.b_vol>SQRT(SQUARE(b2.b_vol)+SQUARE(b1.b_vol)))
