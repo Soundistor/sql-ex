@@ -809,3 +809,20 @@ From
 	Join utB b2 On b2.b_vol>b1.b_vol
 	Join utB b3 On b3.b_vol>b2.b_vol
 Where not (b3.b_vol>SQRT(SQUARE(b2.b_vol)+SQUARE(b1.b_vol)))
+
+/*Задание: 110 (Serge I: 2003-12-24)
+Определить имена разных пассажиров, когда-либо летевших рейсом, который вылетел в субботу, а приземлился в воскресенье.*/
+
+Select 
+	name
+From
+		Passenger
+Where ID_psg in 
+(
+	Select
+		pt.ID_psg
+	From
+		Trip t 
+		Join Pass_in_trip pt On t.trip_no=pt.trip_no
+	Where DATEPART(dw, pt.date) = 7	and t.time_out > t.time_in
+)
