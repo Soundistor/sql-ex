@@ -344,12 +344,43 @@ Group by c.class
 --Задание: 59 (Serge I: 2003-02-15)
 --Посчитать остаток денежных средств на каждом пункте приема для базы данных с отчетностью не чаще одного раза в день. Вывод: пункт, остаток.
 
-select Income_o.point, sum(Income_o.inc)-sum(Outcome_o.out) as mon
+select Income_o.point, (sum(Income_o.inc)-sum(Outcome_o.out)) as mon
 From Income_o, Outcome_o
 Where Income_o.point=Outcome_o.point
 Group by Income_o.point
-Income_o(point, date, inc)
-Outcome_o(point, date, out)
+
+(select sum(inc) from income_o group by point)
+
+select Income_o.point, ((select sum(inc) from income_o group by point)-sum(Outcome_o.out)) as mon
+From Income_o, Outcome_o
+Where Income_o.point=Outcome_o.point
+Group by Income_o.point
+
+Select
+	in1.point,
+	in1.sum1-
+(Case When out1.sum1 is Null Then 0
+	Else out1.sum1
+	End)
+From
+(
+	Select point, sum(inc) sum1 
+	from Income_o 
+	group by point
+) in1
+Left Join
+(
+	Select point, sum(out) sum1 
+	from Outcome_o 
+	group by point
+) out1
+On out1.point=in1.point
+
+/*Задание: 60 (Serge I: 2003-02-15)
+Посчитать остаток денежных средств на начало дня 15/04/01 на каждом пункте приема для базы данных с отчетностью не чаще одного раза в день. Вывод: пункт, остаток.
+Замечание. Не учитывать пункты, информации о которых нет до указанной даты.*/
+
+
 
 --Задание: 63 (Serge I: 2003-04-08)
 --Определить имена разных пассажиров, когда-либо летевших на одном и том же месте более одного раза.
