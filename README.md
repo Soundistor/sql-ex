@@ -1,1 +1,1 @@
-"# sql-ex" 
+Solution for sql-ex 
