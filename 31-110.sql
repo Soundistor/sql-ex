@@ -341,20 +341,8 @@ Group by c.class
 
 
 
---Задание: 59 (Serge I: 2003-02-15)
---Посчитать остаток денежных средств на каждом пункте приема для базы данных с отчетностью не чаще одного раза в день. Вывод: пункт, остаток.
-
-select Income_o.point, (sum(Income_o.inc)-sum(Outcome_o.out)) as mon
-From Income_o, Outcome_o
-Where Income_o.point=Outcome_o.point
-Group by Income_o.point
-
-(select sum(inc) from income_o group by point)
-
-select Income_o.point, ((select sum(inc) from income_o group by point)-sum(Outcome_o.out)) as mon
-From Income_o, Outcome_o
-Where Income_o.point=Outcome_o.point
-Group by Income_o.point
+/*Задание: 59 (Serge I: 2003-02-15)
+Посчитать остаток денежных средств на каждом пункте приема для базы данных с отчетностью не чаще одного раза в день. Вывод: пункт, остаток.*/
 
 Select
 	in1.point,
@@ -379,6 +367,32 @@ On out1.point=in1.point
 /*Задание: 60 (Serge I: 2003-02-15)
 Посчитать остаток денежных средств на начало дня 15/04/01 на каждом пункте приема для базы данных с отчетностью не чаще одного раза в день. Вывод: пункт, остаток.
 Замечание. Не учитывать пункты, информации о которых нет до указанной даты.*/
+
+Select
+	in1.point,
+	in1.sum1-
+(Case When out1.sum1 is Null Then 0
+	Else out1.sum1
+	End)
+From
+(
+	Select point, sum(inc) sum1 
+	from Income_o 
+	Where date < '2001-04-15'
+	group by point
+) in1
+Left Join
+(
+	Select point, sum(out) sum1 
+	from Outcome_o 
+	Where date < '2001-04-15'
+	group by point
+) out1
+On out1.point=in1.point
+
+/*Задание: 61 (Serge I: 2003-02-14)
+Посчитать остаток денежных средств на всех пунктах приема для базы данных с отчетностью не чаще одного раза в день.*/
+
 
 
 
@@ -415,7 +429,30 @@ From
 --1) A - B и B - A считать ОДНИМ И ТЕМ ЖЕ маршрутом.
 --2) Использовать только таблицу Trip
 
-???????
+Select
+	count(*) qty
+From
+	(Select Top 1 With TIES
+		sum(qty) qty, p1, p2
+			From
+		(
+			Select 
+				count(*) qty, town_from p1, town_to p2
+			From
+				Trip
+			Where town_from>=town_to
+			Group by town_from, town_to
+			Union ALL
+			Select
+				 count(*) qty, town_to p1, town_from p2
+			From
+				Trip
+			Where town_to>town_from
+			Group by town_from, town_to
+	) as t1 
+		Group by p1, p2
+		Order by qty desc) as t2
+
 
 --Задание: 70 (Serge I: 2003-02-14)
 --Укажите сражения, в которых участвовало по меньшей мере три корабля одной и той же страны.
@@ -667,7 +704,7 @@ Order by t1.qty desc
 --Найти производителей, у которых больше всего моделей в таблице Product, а также тех, у которых меньше всего моделей.
 --Вывод: maker, число моделей
 
-Select TOP 1 WITH TIES * FROM (
+Select TOP 1 WITH TIES maker, qty  FROM (
 Select t1.maker, max(t1.qty) as qty from (
 select 
 	maker, count(model) as qty
@@ -675,9 +712,9 @@ from
 	Product
 Group by maker) t1
 Group by t1.maker) t11
-Order by t11.qty desc
+Order by qty desc
 Union
-Select TOP 1 WITH TIES * FROM (
+Select TOP 1 WITH TIES maker, qty  FROM (
 Select t2.maker, min(t2.qty) as qty from (
 select 
 	maker, count(model) as qty
@@ -685,7 +722,26 @@ from
 	Product
 Group by maker) t2
 Group by t2.maker) t22
-Order by t22.qty
+Order by qty
+
+
+Select maker, count(model) qty from Product
+Group by maker
+Having count(model) = ALL
+(select count(model) from Product
+Group by maker)
+
+
+
+select Maker, count(distinct model) Qty from Product
+group by maker
+having count(distinct model) > = ALL
+(select count(distinct model) from Product
+group by maker)
+or
+count(distinct model) <= ALL
+(select count(distinct model) from Product
+group by maker)
 
 ?????????????????????????
 
