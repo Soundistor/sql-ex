@@ -110,41 +110,49 @@ Where Classes.numGuns >= 10
 -- название характеристики (имя соответствующего столбца в таблице PC);
 -- значение характеристики
 
+Select chr, value 
+From (
 Select 
-	chr, value
+	cast(model as NVARCHAR(10)) as model, 
+	cast(speed as NVARCHAR(10)) as speed, 
+	cast(ram as NVARCHAR(10)) as ram, 
+	cast(hd as NVARCHAR(10)) as hd, 
+	cast(cd as NVARCHAR(10)) as cd, 
+	cast(price as NVARCHAR(10)) as price
 From PC
-Having max(code)
-select
-case a 
-when 
-then
-else
-end
-from
-cast speed
-ram
-hd
-price
-screen
-
-select fields,A from
-(
-Select
-  cast(model as NVARCHAR(10)) as model
-, cast (speed as NVARCHAR(10)) as speed
-, cast(ram as NVARCHAR(10)) as ram
-,cast(hd as NVARCHAR(10)) as hd
-, cast(cd as NVARCHAR(10)) as cd
-, cast(price as NVARCHAR(10)) as price from PC
-where code = (Select max(code) from PC)
-) as t
+Where code in (Select max(code) from PC)
+) as t1
 
 unpivot
 (
-A for fields in (model, speed, ram, hd, cd, price)
+value for chr in (model, speed, ram, hd, cd, price)
 ) as unpvt
 
---???????????????????????
+Case When out1.sum1 is Null Then 0
+	Else out1.sum1
+	End
+
+Select chr, value 
+From (
+Select 
+	cast(model as NVARCHAR(10)) as model, 
+	cast(speed as NVARCHAR(10)) as speed, 
+	cast(ram as NVARCHAR(10)) as ram, 
+	cast(hd as NVARCHAR(10)) as hd, 
+	cast(cd as NVARCHAR(10)) as cd, 
+	Case When price is Null 
+	Then cast(price as NVARCHAR(10)) = '0' as price
+	Else cast(price as NVARCHAR(10)) as price
+	End
+From PC
+Where code in (Select max(code) from PC)
+) as t1
+
+unpivot
+(
+value for chr in (model, speed, ram, hd, cd, price)
+) as unpvt
+
 
 --Задание: 42 (Serge I: 2002-11-05)
 --Найдите названия кораблей, потопленных в сражениях, и название сражения, в котором они были потоплены.
@@ -393,8 +401,34 @@ On out1.point=in1.point
 /*Задание: 61 (Serge I: 2003-02-14)
 Посчитать остаток денежных средств на всех пунктах приема для базы данных с отчетностью не чаще одного раза в день.*/
 
+Select
+	sum(t1.sum1)
+From
+(
+	Select point, sum(inc) sum1 
+	from Income_o 
+	group by point
+Union
+	Select point, -sum(out) sum1 
+	from Outcome_o 
+	group by point
+) t1
 
+/*Задание: 62 (Serge I: 2003-02-15)
+Посчитать остаток денежных средств на всех пунктах приема на начало дня 15/04/01 для базы данных с отчетностью не чаще одного раза в день.*/
 
+Select
+	sum(t1.sum1)
+From
+(
+	Select sum(inc) sum1 
+	from Income_o 
+	Where date < '2001-04-15'
+Union
+	Select -sum(out) sum1 
+	from Outcome_o 
+	Where date < '2001-04-15'
+) t1
 
 --Задание: 63 (Serge I: 2003-04-08)
 --Определить имена разных пассажиров, когда-либо летевших на одном и том же месте более одного раза.
@@ -406,6 +440,76 @@ Where ID_psg in
 	From Pass_in_trip
 	Group by ID_psg, place
 	Having count(*)>1)
+
+/*Задание: 64 (Serge I: 2010-06-04)
+Используя таблицы Income и Outcome, для каждого пункта приема определить дни, когда был приход, но не было расхода и наоборот.
+Вывод: пункт, дата, тип операции (inc/out), денежная сумма за день.*/
+
+Select t1.point, t1.date, t1.type, t1.sum1
+From
+	(
+		Select point, date, 'inc' type, sum(inc) sum1
+			 COALESCE(sum(inc),'eqv') type
+		End
+		From Income
+		Group by point, date
+		Union
+		Select point, date, 'out' type, sum(out) sum1
+		From Outcome
+		Group by point, date
+	) t1
+
+
+	Select t1.point, t1.date, t1.type, t1.sum1,
+		--COALESCE(t1.type,'eqv') t1.sum1
+		 CASE WHEN t1.sum1 is null THEN t1.type = 'eqv' ELSE t1.type END
+From
+	(
+		Select point, date, CASE WHEN sum(inc) is null THEN 'eqv' as type ELSE 'inc' as type END, sum(inc) sum1
+		From Income
+		Group by point, date
+	) t1
+
+		Select t1.point, t1.date, 
+		CASE WHEN t1.sum1 is null 
+		THEN 'eqv'
+		WHEN t1.sum1 < 0 
+		THEN 'out', t1.sum1=-t1.sum1 
+		ELSE 'inc' 
+		END, 
+		t1.sum1
+		From (
+			Select point, date, sum(inc) sum1
+			From Income
+			Group by point, date
+			Join
+			Select point, date, -sum(out) sum1
+			From Outcome
+			Group by point, date
+			) t1
+
+
+
+SELECT i1.point, i1.date, 'inc', sum(inc) FROM Income,
+(SELECT point, date FROM Income
+EXCEPT
+SELECT Income.point, Income.date FROM Income
+JOIN Outcome ON (Income.point=Outcome.point) AND
+(Income.date=Outcome.date)
+) AS i1
+WHERE i1.point=Income.point AND i1.date=Income.date
+GROUP BY i1.point, i1.date
+UNION
+SELECT o1.point, o1.date, 'out', sum(out) FROM Outcome,
+(SELECT point, date FROM Outcome
+EXCEPT
+SELECT Income.point, Income.date FROM Income
+JOIN Outcome ON (Income.point=Outcome.point) AND
+(Income.date=Outcome.date)
+) AS o1
+WHERE o1.point=Outcome.point AND o1.date=Outcome.date
+GROUP BY o1.point, o1.date
+
 
 --Задание: 67 (Serge I: 2010-03-27)
 --Найти количество маршрутов, которые обслуживаются наибольшим числом рейсов.
@@ -575,12 +679,12 @@ WHERE NOT EXISTS (
 --Определить дни, когда было выполнено максимальное число рейсов из Ростова ('Rostov'). Вывод: число рейсов, дата.
 
 Select TOP 1 WITH TIES * FROM
-(Select
-	count(distinct(pt.trip_no)) qty, pt.date
-From
-	Trip t, Pass_in_trip pt
-Where t.trip_no=pt.trip_no and t.town_from = ('Rostov')
-Group by pt.trip_no, pt.date) t1
+	(Select
+		count(distinct(pt.trip_no)) qty, pt.date
+	From
+		Trip t, Pass_in_trip pt
+	Where t.trip_no=pt.trip_no and t.town_from = 'Rostov'
+	Group by pt.date) t1
 Order by t1.qty Desc
 
 --Задание: 78 (Serge I: 2005-01-19)
@@ -685,65 +789,33 @@ GROUP BY maker
 --Среди тех, кто пользуется услугами только одной компании, определить имена разных пассажиров, летавших чаще других. 
 --Вывести: имя пассажира, число полетов и название компании.
 
-Select TOP 1 WITH TIES * FROM (
+Select
+	(SELECT name FROM Passenger WHERE ID_psg = t1.ID_psg) AS name,
+	t1.qty, 
+	(SELECT name FROM Company WHERE ID_comp = t1.ID_comp) AS Company
+	FROM (
 select 
-	p.name as Pass, count(t.trip_no) as qty, c.name as Company
+	pt.ID_psg as ID_psg, count(*) as qty, MIN(t.ID_comp) as ID_comp, MAX(COUNT(*)) OVER() AS Max_Qty
 from
-	Passenger p, Pass_in_trip pt, Trip t, Company c
+	Pass_in_trip pt, Trip t
 Where 
-	p.ID_psg=pt.ID_psg and
-	pt.trip_no=t.trip_no and
-	t.ID_comp=c.ID_comp
-Group by p.name, c.name) t1
-Order by t1.qty desc
-
-
-????????????????????????????
+	pt.trip_no=t.trip_no
+Group by pt.ID_psg
+Having MAX(t.ID_comp)=MIN(t.ID_comp)) t1
+WHERE t1.Max_Qty=t1.qty
 
 --Задание: 89 (Serge I: 2012-05-04)
 --Найти производителей, у которых больше всего моделей в таблице Product, а также тех, у которых меньше всего моделей.
 --Вывод: maker, число моделей
 
-Select TOP 1 WITH TIES maker, qty  FROM (
-Select t1.maker, max(t1.qty) as qty from (
-select 
-	maker, count(model) as qty
-from
-	Product
-Group by maker) t1
-Group by t1.maker) t11
-Order by qty desc
-Union
-Select TOP 1 WITH TIES maker, qty  FROM (
-Select t2.maker, min(t2.qty) as qty from (
-select 
-	maker, count(model) as qty
-from
-	Product
-Group by maker) t2
-Group by t2.maker) t22
-Order by qty
-
+With sr as (select count(model) qty from Product Group by maker)
 
 Select maker, count(model) qty from Product
 Group by maker
-Having count(model) = ALL
-(select count(model) from Product
-Group by maker)
+Having count(model) = (select MAX(qty) from sr)
+	or
+count(model) = (select MIN(qty) from sr) 
 
-
-
-select Maker, count(distinct model) Qty from Product
-group by maker
-having count(distinct model) > = ALL
-(select count(distinct model) from Product
-group by maker)
-or
-count(distinct model) <= ALL
-(select count(distinct model) from Product
-group by maker)
-
-?????????????????????????
 
 --Задание: 90 (Serge I: 2012-05-04)
 --Вывести все строки из таблицы Product, кроме трех строк с наименьшими номерами моделей и трех строк с наибольшими номерами моделей.
