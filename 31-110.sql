@@ -141,9 +141,9 @@ Select
 	cast(hd as NVARCHAR(10)) as hd, 
 	cast(cd as NVARCHAR(10)) as cd, 
 	Case When price is Null 
-	Then cast(price as NVARCHAR(10)) = '0' as price
-	Else cast(price as NVARCHAR(10)) as price
-	End
+	Then '0'
+	Else cast(price as NVARCHAR(10))
+	End price
 From PC
 Where code in (Select max(code) from PC)
 ) as t1
