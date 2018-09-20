@@ -11,18 +11,20 @@ Where bore >= 16
 --Одной из характеристик корабля является половина куба калибра его главных орудий (mw). С точностью до 2 десятичных знаков определите среднее значение mw для кораблей каждой страны, у которой есть корабли в базе данных.
 
 Select 
-	country,
-	cast (avg(power(bore,3)/2) as numeric(6,2)) as weight
-From Classes
-Group by country
+	t1.country,
+	cast(avg(power(t1.bore,3)/2) as numeric(6,2)) as weight
+From (
+	Select c.country, c.bore, s.name
+	From Classes c
+		Left Join Ships s On c.class=s.class
+	Union
+	Select c.country, c.bore, o.ship name
+	From Classes c
+		Left Join Outcomes o on c.class=o.ship
+		) t1
+Where name is not null
+Group by t1.country
 
---???????????????????????
-Select country, cast(avg((power(bore,3)/2)) as numeric(6,2)) as weight
-from (select country, classes.class, bore, name from classes left join ships on classes.class=ships.class
-union all
-select distinct country, class, bore, ship from classes t1 left join outcomes t2 on t1.class=t2.ship
-where ship=class and ship not in (select name from ships) ) a
-where name IS NOT NULL group by country
 
 --Задание: 33
 --Укажите корабли, потопленные в сражениях в Северной Атлантике (North Atlantic). Вывод: ship.
@@ -214,12 +216,12 @@ Where otc.battle = 'Guadalcanal'
 --Пронумеровать строки из таблицы Product в следующем порядке: имя производителя в порядке убывания числа производимых им моделей (при одинаковом числе моделей имя производителя в алфавитном порядке по возрастанию), номер модели (по возрастанию).
 --Вывод: номер в соответствии с заданным порядком, имя производителя (maker), модель (model) 
 
-Select 
-	count (*) numb, maker, model
+Select count(*) OVER (order by t1.numb DESC, t1.maker, t1.model) no, t1.maker, t1.model
+From
+(Select 
+	count (*) OVER (partition by maker) numb, maker, model
 From Product
-Order by maker
-
---??????????????????????????????????
+) t1
 
 --Задание: 48 (Serge I: 2003-02-16)
 --Найдите классы кораблей, в которых хотя бы один корабль был потоплен в сражении.
