@@ -238,8 +238,6 @@ From
 	Classes, Outcomes 
 Where Outcomes.ship = Classes.class and Outcomes.result = 'sunk'
 
-
-
 --Задание: 49 (Serge I: 2003-02-17)
 --Найдите названия кораблей с орудиями калибра 16 дюймов (учесть корабли из таблицы Outcomes).
 
@@ -258,7 +256,6 @@ Join Classes On Outcomes.ship = Classes.class) as r
 
 Where r.bore = 16
 
-
 --Задание: 50 (Serge I: 2002-11-05)
 --Найдите сражения, в которых участвовали корабли класса Kongo из таблицы Ships.
 
@@ -266,6 +263,67 @@ select distinct battle
 from Outcomes
 Join Ships On Outcomes.ship=Ships.name
 Where Ships.class='Kongo'
+
+/*Задание: 51 (Serge I: 2003-02-17)
+Найдите названия кораблей, имеющих наибольшее число орудий среди всех имеющихся кораблей такого же водоизмещения (учесть корабли из таблицы Outcomes).
+Примите во внимание случай, когда максимальное число орудий присутствует у класса, у которого нет кораблей в базе данных. 
+В данной задаче речь идет именно о кораблях, а не о классах.*/
+
+/*With t1 AS 
+(
+	Select max(c.numGuns) MaxGuns, c.displacement, s.name
+	From Classes c
+		Left Join Ships s On c.class=s.class
+	Group by c.displacement, s.name
+	Union
+	Select max(c.numGuns) MaxGuns, c.displacement, o.ship name
+	From Classes c
+		Left Join Outcomes o on c.class=o.ship
+	Group by c.displacement, o.ship
+), t2 AS
+(
+	Select max(c.numGuns) MaxGuns, c.displacement, s.name
+	From Classes c
+		Left Join Ships s On c.class=s.class
+	Group by c.displacement, s.name
+	Union
+	Select max(c.numGuns) MaxGuns, c.displacement, o.ship name
+	From Classes c
+		Left Join Outcomes o on c.class=o.ship
+	Group by c.displacement, o.ship
+)
+
+Select name, MaxGuns, displacement 
+From t1
+Where name is not null*/
+
+With t1 AS 
+(
+	Select numGuns, displacement, name
+	From 
+		(Select s.name, s.class
+		From Ships s
+		Union
+		Select o.ship, o.ship
+		From Outcomes o) as tt1		
+		Join Classes c On c.class=tt1.class
+), t2 AS
+(
+	Select max(numGuns) MaxGuns, displacement
+	From 
+		(Select s.name, s.class
+		From Ships s
+		Union
+		Select o.ship, o.ship
+		From Outcomes o) as tt2
+		Join Classes c on c.class=tt2.class
+	Group by displacement
+)
+
+Select t1.name/*, t2.MaxGuns, t1.displacement*/
+From t1
+	Join t2 On t2.MaxGuns=t1.numGuns and t2.displacement=t1.displacement
+
 
 --Задание: 52 (qwrqwr: 2010-04-23)
 --Определить названия всех кораблей из таблицы Ships, которые могут быть линейным японским кораблем, имеющим число главных орудий не менее девяти, калибр орудий менее 19 дюймов и водоизмещение не более 65 тыс.тонн
